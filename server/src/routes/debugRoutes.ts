@@ -1,19 +1,12 @@
 import express from 'express';
+import { DebugController } from '../controllers';
 
 const router = express.Router();
 
 // Debug endpoint to check session
-router.get('/session', (req, res) => {
-  res.json({
-    session: req.session,
-    cookies: req.cookies,
-    headers: req.headers
-  });
-});
+router.get('/session', DebugController.getSession);
 
 // Health check
-router.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+router.get('/health', DebugController.healthCheck);
 
 export default router; 
