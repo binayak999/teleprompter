@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Video, Bug } from 'lucide-react';
+import { ChevronDown, Video, Bug, File, FileText } from 'lucide-react';
 import VideoList from './VideoList';
 import { api } from '../services/api';
 
@@ -31,13 +31,11 @@ export default function Header({ scrollSpeed, onSpeedChange, onScriptClick }: He
   };
 
   return (
-    <header className="flex items-center justify-between mb-8">
+    <header className="flex items-center z-50 transition-all max-w-7xl mx-auto duration-300  py-2  sm:px-6 lg:px-8 justify-between mb-8">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm">
-          <div className="w-4 h-4 bg-purple-500 rounded-full"></div>
+        <div className=" flex items-center justify-center ">
+          <img src='/AI_Main_Banner.png' alt="AI District Logo" className="w-auto h-12" />
         </div>
-        <span className="text-gray-800 font-medium">AI District</span>
-        <span className="text-gray-600 text-sm">HUMAN & AI LIVE</span>
       </div>
 
       <div className="flex items-center gap-6">
@@ -46,6 +44,7 @@ export default function Header({ scrollSpeed, onSpeedChange, onScriptClick }: He
           onClick={onScriptClick}
           className="bg-gray-800 px-4 py-2 rounded-full text-white flex items-center gap-2 hover:bg-gray-700 transition-all shadow-lg"
         >
+          <FileText className="w-4 h-4" />
           <span>Script</span>
           <ChevronDown className="w-4 h-4" />
         </button>
@@ -53,7 +52,7 @@ export default function Header({ scrollSpeed, onSpeedChange, onScriptClick }: He
         {/* Videos Button */}
         <button
           onClick={() => setIsVideoListOpen(true)}
-          className="bg-pink-500 px-4 py-2 rounded-full text-white flex items-center gap-2 hover:bg-pink-600 transition-all shadow-lg"
+          className="bg-gradient-button px-4 py-2 rounded-full text-white flex items-center gap-2 hover:bg-gradient-button-hover transition-all shadow-lg"
         >
           <Video className="w-4 h-4" />
           <span>Videos</span>
@@ -63,7 +62,7 @@ export default function Header({ scrollSpeed, onSpeedChange, onScriptClick }: He
 
         {/* Speed Control */}
         <div className="flex items-center gap-4">
-          <span className="text-gray-800 font-medium">Speed</span>
+          <span className="text-white font-semibold ">Speed</span>
           <div className="flex items-center gap-3">
             <button
               onClick={() => changeSpeed('decrease')}
@@ -72,7 +71,7 @@ export default function Header({ scrollSpeed, onSpeedChange, onScriptClick }: He
               <span className="text-lg font-bold">−</span>
             </button>
 
-            <div className="w-32 bg-gray-300 rounded-full h-2 relative">
+            <div className="w-32  bg-gray-300 rounded-full h-2 relative">
               <input
                 type="range"
                 min="10"

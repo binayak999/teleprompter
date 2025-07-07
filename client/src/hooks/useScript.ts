@@ -12,7 +12,7 @@ export function useScript() {
   });
 
   const generateScript = async () => {
-    if (!scriptSettings.topic.trim()) return;
+    if (!scriptSettings.topic) return;
 
     setIsGeneratingScript(true);
     setScript(''); // Clear previous script

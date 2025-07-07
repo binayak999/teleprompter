@@ -13,19 +13,21 @@ export default function TeleprompterDisplay({ script, isScrolling, scrollSpeed }
   // Teleprompter scrolling
   useEffect(() => {
     if (isScrolling && containerRef.current) {
+      // Scroll to top before starting
+      containerRef.current.scrollTop = 0;
       scrollIntervalRef.current = window.setInterval(() => {
-        if (containerRef.current) {
-          containerRef.current.scrollTop += scrollSpeed / 10;
-          if (containerRef.current.scrollTop >= containerRef.current.scrollHeight - containerRef.current.clientHeight) {
-            // Stop scrolling when reaching the end
-            return;
-          }
+      if (containerRef.current) {
+        containerRef.current.scrollTop += scrollSpeed / 10;
+        if (containerRef.current.scrollTop >= containerRef.current.scrollHeight - containerRef.current.clientHeight) {
+        // Stop scrolling when reaching the end
+        return;
         }
+      }
       }, 100);
     } else {
       if (scrollIntervalRef.current) {
-        clearInterval(scrollIntervalRef.current);
-        scrollIntervalRef.current = null;
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
       }
     }
 
@@ -40,10 +42,10 @@ export default function TeleprompterDisplay({ script, isScrolling, scrollSpeed }
     <div className="mb-4">
       <div
         ref={containerRef}
-        className="bg-white rounded-2xl p-6 shadow-xl max-w-7xl mx-auto overflow-hidden relative"
-        style={{ height: '200px', overflowY: 'auto' }}
+        className="bg-white rounded-md p-6 px-7 shadow-xl max-w-7xl mx-auto overflow-hidden relative"
+        style={{ height: '150px', overflowY: 'auto' }}
       >
-        <div className="text-gray-900 text-2xl leading-relaxed font-medium select-none text-center">
+        <div className="text-gray-900 text-4xl leading-relaxed font-semibold select-none text-center">
           {script}
         </div>
       </div>
