@@ -31,49 +31,194 @@ export class ScriptController {
   }
 
   /**
-   * Generate and save a new script
+   * Generate script using DeepSeek AI with streaming and save to database
    */
   static async generateScript(req: Request, res: Response): Promise<void> {
     try {
       const userId = getUserId(req);
       const { topic, duration, tone } = req.body;
-      
+
       if (!topic || !duration || !tone) {
         res.status(400).json({ error: 'Missing required fields: topic, duration, tone' });
         return;
       }
-      
-      // Generate script content using AI (placeholder for now)
-      const scriptContent = await ScriptController.generateAIScript(topic, duration, tone);
-      
-      // Generate unique script ID
+
+      if (!process.env.DEEPSEEK_API_KEY) {
+        res.status(500).json({ error: 'DeepSeek API key not configured' });
+        return;
+      }
+
+      // Generate unique script ID and title
       const scriptId = `script_${Date.now()}_${uuidv4().substr(0, 8)}`;
-      
-      // Create title from topic
       const title = `${topic} - ${duration}min ${tone}`;
 
-      // Save script to database
+      // Calculate approximate word count based on duration (average speaking rate: 150 words per minute)
+      const targetWordCount = duration * 150;
+
+      const systemPrompt = `You are a professional teleprompter script writer. Your ONLY job is to create clean, teleprompter-ready scripts.
+
+      CRITICAL RULES:
+      - NEVER include metadata, formatting instructions, or explanatory text
+      - NEVER add titles, headers, or section markers
+      - NEVER include phrases like "Here's your script:" or "Script begins:"
+      - NEVER add timestamps, word counts, or technical notes
+      - ONLY provide the pure script content that should be read aloud
+      - Start directly with the first word of the script
+      - End directly with the last word of the script
+      - Use natural speech patterns and conversational flow
+      - Include clear paragraph breaks for easy reading
+      - Avoid complex sentences that are hard to read aloud
+      - Use active voice and direct language
+      - Include natural pauses and transitions
+      - Target approximately ${targetWordCount} words for a ${duration}-minute presentation
+      - Format with proper spacing for teleprompter display
+      
+      REMEMBER: Your response should be ONLY the script content, nothing else.`;
+
+      const userPrompt = `Create a ${duration}-minute teleprompter script about "${topic}" with a ${tone} tone.
+      
+      Requirements:
+      - Engaging and informative content
+      - Well-paced for ${duration} minutes of speaking
+      - Formatted for easy teleprompter reading
+      - Appropriate for the ${tone} tone requested
+      - Clear paragraph breaks and natural speech patterns
+      
+      IMPORTANT: Provide ONLY the script content. Do not include any introductory text, formatting notes, or metadata. Start directly with the first sentence of the script.`;
+
+      // Set up SSE headers
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+      });
+
+      // Send initial status
+      res.write(`data: ${JSON.stringify({ type: 'status', message: 'Starting script generation...' })}\n\n`);
+
+      const response = await axios.post('https://api.deepseek.com/v1/chat/completions', {
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: userPrompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+        top_p: 0.9,
+        frequency_penalty: 0.1,
+        presence_penalty: 0.1,
+        stream: true // Enable streaming
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        },
+        responseType: 'stream'
+      });
+
+      let fullScript = '';
+      let buffer = '';
+
+      response.data.on('data', (chunk: Buffer) => {
+        const lines = chunk.toString().split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            
+            if (data === '[DONE]') {
+              // Clean up the final script to remove any metadata
+              const cleanedScript = ScriptController.cleanScriptContent(fullScript);
+              
+              // Save script to database
+              ScriptController.saveScriptToDatabase(userId, scriptId, title, cleanedScript, topic, duration, tone);
+              
+              // Send completion signal with script ID
+              res.write(`data: ${JSON.stringify({ type: 'complete', script: cleanedScript, scriptId, title })}\n\n`);
+              res.end();
+              return;
+            }
+            
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+                const content = parsed.choices[0].delta.content;
+                fullScript += content;
+                buffer += content;
+                
+                // Send chunks of text (every few characters or on sentence breaks)
+                if (buffer.length >= 20 || buffer.includes('.') || buffer.includes('\n')) {
+                  res.write(`data: ${JSON.stringify({ type: 'chunk', content: buffer })}\n\n`);
+                  buffer = '';
+                }
+              }
+            } catch (e) {
+              // Ignore parsing errors for incomplete JSON
+            }
+          }
+        }
+      });
+
+      response.data.on('error', (error: any) => {
+        console.error('Stream error:', error);
+        res.write(`data: ${JSON.stringify({ type: 'error', message: 'Stream error occurred' })}\n\n`);
+        res.end();
+      });
+
+      response.data.on('end', () => {
+        // Send any remaining buffer content
+        if (buffer.length > 0) {
+          res.write(`data: ${JSON.stringify({ type: 'chunk', content: buffer })}\n\n`);
+        }
+        
+        console.log(`Script generated successfully for topic: "${topic}" (${duration} min, ${tone} tone)`);
+      });
+
+    } catch (error) {
+      console.error('Script generation error:', error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          res.write(`data: ${JSON.stringify({ type: 'error', message: 'Invalid DeepSeek API key' })}\n\n`);
+        } else if (error.response?.status === 429) {
+          res.write(`data: ${JSON.stringify({ type: 'error', message: 'Rate limit exceeded. Please try again later.' })}\n\n`);
+        } else {
+          res.write(`data: ${JSON.stringify({ type: 'error', message: `DeepSeek API error: ${error.response?.data?.error?.message || error.message}` })}\n\n`);
+        }
+      } else {
+        res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to generate script' })}\n\n`);
+      }
+      res.end();
+    }
+  }
+
+  /**
+   * Save script to database (helper method)
+   */
+  private static async saveScriptToDatabase(userId: string, scriptId: string, title: string, content: string, topic: string, duration: number, tone: string): Promise<void> {
+    try {
       const script = new Script({
         userId,
         scriptId,
         title,
-        content: scriptContent,
+        content,
         topic,
         duration,
         tone
       });
 
       await script.save();
-
-      res.json({
-        script: scriptContent,
-        scriptId,
-        title,
-        message: 'Script generated and saved successfully'
-      });
+      console.log(`Script saved to database with ID: ${scriptId}`);
     } catch (error) {
-      console.error('Script generation error:', error);
-      res.status(500).json({ error: 'Failed to generate script' });
+      console.error('Failed to save script to database:', error);
     }
   }
 

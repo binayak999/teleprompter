@@ -253,7 +253,7 @@ export const api = {
     tone: string,
     onChunk: (content: string) => void,
     onStatus: (message: string) => void,
-    onComplete: (fullScript: string) => void,
+    onComplete: (fullScript: string, scriptId: string, title: string) => void,
     onError: (error: string) => void
   ): Promise<void> {
     try {
@@ -276,7 +276,6 @@ export const api = {
       }
 
       const decoder = new TextDecoder();
-      let fullScript = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -289,17 +288,23 @@ export const api = {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') {
-              onComplete(fullScript);
               return;
             }
             try {
               const parsed = JSON.parse(data);
-              if (parsed.content) {
-                fullScript += parsed.content;
+              if (parsed.type === 'complete') {
+                onComplete(parsed.script, parsed.scriptId, parsed.title);
+                return;
+              }
+              if (parsed.type === 'chunk' && parsed.content) {
                 onChunk(parsed.content);
               }
-              if (parsed.status) {
-                onStatus(parsed.status);
+              if (parsed.type === 'status' && parsed.message) {
+                onStatus(parsed.message);
+              }
+              if (parsed.type === 'error' && parsed.message) {
+                onError(parsed.message);
+                return;
               }
             } catch {
               // Ignore parsing errors for incomplete JSON
