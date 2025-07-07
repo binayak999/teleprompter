@@ -83,7 +83,7 @@ export default function CameraView({
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="bg-black rounded-2xl overflow-hidden shadow-2xl relative" style={{ height: 'calc(100vh - 340px)', minHeight: '500px' }}>
+      <div className="bg-black rounded-2xl overflow-hidden shadow-2xl relative" style={{ height: 'calc(100vh - 300px)', minHeight: '500px' }}>
         {/* Camera Video */}
         {stream && !cameraError ? (
           <>
@@ -120,7 +120,7 @@ export default function CameraView({
               {cameraError && (
                 <button
                   onClick={onInitializeCamera}
-                  className="px-4 py-2 bg-pink-500 hover:bg-pink-600 rounded transition-colors text-white"
+                  className="px-4 py-2 bg-gradient-button hover:bg-gradient-button-hover rounded transition-colors text-white"
                 >
                   Retry Camera
                 </button>
