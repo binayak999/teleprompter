@@ -1,0 +1,47 @@
+# Node modules
+/server/node_modules
+/client/node_modules
+/shared/node_modules
+
+# Environment files
+/client/.env
+/server/.env
+/shared/.env
+.env
+.env.*
+
+# Build output
+/server/dist
+/client/dist
+/shared/dist
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+
+# Yarn and pnpm
+.yarn/
+.pnp.*
+.yarnrc.yml
+
+# Coverage
+coverage/
+
+# Misc
+*.tgz
+*.bak
+*.tmp
+
+# Ignore root-level node_modules if ever created
+/node_modules
