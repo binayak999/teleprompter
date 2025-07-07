@@ -7,8 +7,8 @@ export const generateUserId = (): string => {
 
 // Get or create a user ID from session/cookie
 export const getUserId = (req: any): string => {
-//   console.log('Session:', req.session);
-//   console.log('Cookies:', req.cookies);
+  console.log('Session:', req.session);
+  console.log('Cookies:', req.cookies);
   
   // Check if user ID exists in session
   if (req.session && req.session.userId) {
