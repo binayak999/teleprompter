@@ -1,8 +1,8 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IScript extends Document {
+  _id: mongoose.Types.ObjectId;
   userId: string;
-  scriptId: string;
   title: string;
   content: string;
   topic: string;
@@ -17,11 +17,6 @@ const ScriptSchema = new Schema<IScript>({
     type: String,
     required: true,
     index: true
-  },
-  scriptId: {
-    type: String,
-    required: true,
-    unique: true
   },
   title: {
     type: String,

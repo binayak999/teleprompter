@@ -33,8 +33,6 @@ export class VideoController {
         durationFormatted: formatDuration(video.duration || 0),
         mimetype: video.mimetype,
         scriptId: video.scriptId,
-        scriptTitle: video.scriptTitle,
-        scriptTopic: video.scriptTopic,
         sieveJobId: video.sieveJobId,
         correctedVideoUrl: video.correctedVideoUrl,
         sieveStatus: video.sieveStatus,
@@ -98,12 +96,10 @@ export class VideoController {
 
       const userId = getUserId(req);
       const videoFile = req.files.video as any;
-      const { scriptId, scriptTitle, scriptTopic } = req.body;
+      const { scriptId } = req.body;
       
       console.log('Video save request - User ID:', userId);
       console.log('Video save request - Script ID:', scriptId);
-      console.log('Video save request - Script Title:', scriptTitle);
-      console.log('Video save request - Script Topic:', scriptTopic);
       console.log('Video save request - Body:', req.body);
       
       const timestamp = Date.now();
@@ -123,9 +119,7 @@ export class VideoController {
         url: `/uploads/${filename}`,
         size: videoFile.size,
         mimetype: videoFile.mimetype,
-        scriptId: scriptId || null,
-        scriptTitle: scriptTitle || null,
-        scriptTopic: scriptTopic || null
+        scriptId: scriptId || null
       };
       
       console.log('Saving video with data:', videoData);

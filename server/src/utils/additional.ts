@@ -1,0 +1,1 @@
+export const mediaUrl = 'https://interapi.upliftsolutions.com.np'

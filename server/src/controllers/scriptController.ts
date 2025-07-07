@@ -48,8 +48,7 @@ export class ScriptController {
         return;
       }
 
-      // Generate unique script ID and title
-      const scriptId = `script_${Date.now()}_${uuidv4().substr(0, 8)}`;
+      // Generate title
       const title = `${topic} - ${duration}min ${tone}`;
 
       // Calculate approximate word count based on duration (average speaking rate: 150 words per minute)
@@ -139,11 +138,17 @@ export class ScriptController {
               const cleanedScript = ScriptController.cleanScriptContent(fullScript);
               
               // Save script to database
-              ScriptController.saveScriptToDatabase(userId, scriptId, title, cleanedScript, topic, duration, tone);
-              
-              // Send completion signal with script ID
-              res.write(`data: ${JSON.stringify({ type: 'complete', script: cleanedScript, scriptId, title })}\n\n`);
-              res.end();
+              ScriptController.saveScriptToDatabase(userId, title, cleanedScript, topic, duration, tone)
+                .then(savedScript => {
+                  // Send completion signal with script ID
+                  res.write(`data: ${JSON.stringify({ type: 'complete', script: cleanedScript, scriptId: savedScript._id.toString(), title })}\n\n`);
+                  res.end();
+                })
+                .catch(error => {
+                  console.error('Failed to save script:', error);
+                  res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to save script to database' })}\n\n`);
+                  res.end();
+                });
               return;
             }
             
@@ -203,11 +208,10 @@ export class ScriptController {
   /**
    * Save script to database (helper method)
    */
-  private static async saveScriptToDatabase(userId: string, scriptId: string, title: string, content: string, topic: string, duration: number, tone: string): Promise<void> {
+  private static async saveScriptToDatabase(userId: string, title: string, content: string, topic: string, duration: number, tone: string): Promise<any> {
     try {
       const script = new Script({
         userId,
-        scriptId,
         title,
         content,
         topic,
@@ -215,10 +219,12 @@ export class ScriptController {
         tone
       });
 
-      await script.save();
-      console.log(`Script saved to database with ID: ${scriptId}`);
+      const savedScript = await script.save();
+      console.log(`Script saved to database with ID: ${savedScript._id}`);
+      return savedScript;
     } catch (error) {
       console.error('Failed to save script to database:', error);
+      throw error;
     }
   }
 
@@ -242,7 +248,7 @@ export class ScriptController {
 
       const formattedScripts = scripts.map(script => ({
         id: script._id,
-        scriptId: script.scriptId,
+        scriptId: script._id.toString(),
         title: script.title,
         topic: script.topic,
         duration: script.duration,
@@ -274,7 +280,7 @@ export class ScriptController {
       const userId = getUserId(req);
       const { scriptId } = req.params;
 
-      const script = await Script.findOne({ scriptId, userId });
+      const script = await Script.findOne({ _id: scriptId, userId });
       if (!script) {
         res.status(404).json({ error: 'Script not found' });
         return;
@@ -282,7 +288,7 @@ export class ScriptController {
 
       res.json({
         id: script._id,
-        scriptId: script.scriptId,
+        scriptId: script._id.toString(),
         title: script.title,
         content: script.content,
         topic: script.topic,
@@ -305,13 +311,13 @@ export class ScriptController {
       const userId = getUserId(req);
       const { scriptId } = req.params;
 
-      const script = await Script.findOne({ scriptId, userId });
+      const script = await Script.findOne({ _id: scriptId, userId });
       if (!script) {
         res.status(404).json({ error: 'Script not found' });
         return;
       }
 
-      await Script.findByIdAndDelete(script._id);
+      await Script.findByIdAndDelete(scriptId);
       res.json({ message: 'Script deleted successfully' });
     } catch (error) {
       console.error('Delete script error:', error);
