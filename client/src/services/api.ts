@@ -1,4 +1,21 @@
-const API_BASE_URL = 'http://192.168.1.67:3001/api';
+import axios from 'axios';
+import type { AxiosInstance, AxiosResponse } from 'axios';
+
+// Generate a unique user ID for this session
+const generateUserId = (): string => {
+  // Try to get existing user ID from localStorage
+  let userId = localStorage.getItem('teleprompter_user_id');
+  
+  // If no user ID exists, generate a new one
+  if (!userId) {
+    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('teleprompter_user_id', userId);
+  }
+  
+  return userId;
+};
+
+const API_BASE_URL = 'http://192.168.1.67:3001/api'; // Updated to use server IP
 
 export interface ScriptGenerationRequest {
   topic: string;
@@ -64,95 +81,100 @@ export interface VideoListResponse {
   };
 }
 
-class ApiService {
-  private async fetchWithErrorHandling(url: string, options?: RequestInit) {
-    const response = await fetch(`${API_BASE_URL}${url}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-    });
+// Create axios instance with default configuration
+const createApiInstance = (): AxiosInstance => {
+  const instance = axios.create({
+    baseURL: API_BASE_URL,
+    timeout: 30000, // 30 seconds timeout
+    headers: {
+      'Content-Type': 'application/json',
+      'X-User-ID': generateUserId(),
+    },
+  });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`API Error: ${response.status} - ${error}`);
+  // Request interceptor to add user ID to all requests
+  instance.interceptors.request.use(
+    (config) => {
+      config.headers['X-User-ID'] = generateUserId();
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
     }
+  );
 
-    return response.json();
+  // Response interceptor for error handling
+  instance.interceptors.response.use(
+    (response: AxiosResponse) => {
+      return response;
+    },
+    (error) => {
+      console.error('API Error:', error.response?.data || error.message);
+      return Promise.reject(error);
+    }
+  );
+
+  return instance;
+};
+
+const apiInstance = createApiInstance();
+
+class ApiService {
+  private api: AxiosInstance;
+
+  constructor() {
+    this.api = apiInstance;
   }
 
   async generateScript(request: ScriptGenerationRequest): Promise<ScriptGenerationResponse> {
-    return this.fetchWithErrorHandling('/script/generate', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    const response = await this.api.post('/script/generate', request);
+    return response.data;
   }
 
   async correctEyes(videoFile: File): Promise<EyeCorrectionResponse> {
     const formData = new FormData();
     formData.append('video', videoFile);
 
-    const response = await fetch(`${API_BASE_URL}/sieve/correct-eyes`, {
-      method: 'POST',
-      body: formData,
+    const response = await this.api.post('/sieve/correct-eyes', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`API Error: ${response.status} - ${error}`);
-    }
-
-    return response.json();
+    return response.data;
   }
 
   async checkJobStatus(jobId: string): Promise<JobStatusResponse> {
-    return this.fetchWithErrorHandling(`/sieve/check-job/${jobId}`);
+    const response = await this.api.get(`/sieve/check-job/${jobId}`);
+    return response.data;
   }
 
   async saveVideo(videoBlob: Blob, filename: string): Promise<SaveVideoResponse> {
     const formData = new FormData();
     formData.append('video', videoBlob, filename);
 
-    const response = await fetch(`${API_BASE_URL}/videos/save`, {
-      method: 'POST',
-      body: formData,
+    const response = await this.api.post('/videos/save', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to save video: ${response.statusText}`);
-    }
-
-    return response.json();
+    return response.data;
   }
 
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
-    const response = await fetch(`${API_BASE_URL}/debug/health`);
-    if (!response.ok) {
-      throw new Error(`Health check failed: ${response.statusText}`);
-    }
-    return response.json();
+    const response = await this.api.get('/debug/health');
+    return response.data;
   }
 
   async getVideos(page = 1, limit = 10): Promise<VideoListResponse> {
-    const response = await fetch(`${API_BASE_URL}/videos?page=${page}&limit=${limit}`, {
-      credentials: 'include'
+    const response = await this.api.get('/videos', {
+      params: { page, limit },
     });
-    if (!response.ok) {
-      throw new Error(`Failed to get videos: ${response.statusText}`);
-    }
-    return response.json();
+    return response.data;
   }
 
   async deleteVideo(videoId: string): Promise<{ message: string }> {
-    const response = await fetch(`${API_BASE_URL}/videos/${videoId}`, {
-      method: 'DELETE',
-      credentials: 'include'
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to delete video: ${response.statusText}`);
-    }
-    return response.json();
+    const response = await this.api.delete(`/videos/${videoId}`);
+    return response.data;
   }
 }
 
@@ -164,17 +186,12 @@ export const api = {
     const formData = new FormData();
     formData.append('video', videoBlob, filename);
 
-    const response = await fetch(`${API_BASE_URL}/videos/save`, {
-      method: 'POST',
-      body: formData,
-      credentials: 'include'
+    const response = await apiInstance.post('/videos/save', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to save video: ${response.statusText}`);
-    }
-
-    return response.json();
+    return response.data;
   },
 
   // Generate script using AI (streaming)
@@ -187,119 +204,89 @@ export const api = {
     onComplete: (fullScript: string) => void,
     onError: (error: string) => void
   ): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/script/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ topic, duration, tone }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to generate script: ${response.statusText}`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('No response body reader available');
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-
     try {
+      const response = await fetch(`${API_BASE_URL}/script/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-ID': generateUserId(),
+        },
+        body: JSON.stringify({ topic, duration, tone }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate script: ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body reader available');
+      }
+
+      const decoder = new TextDecoder();
+      let fullScript = '';
+
       while (true) {
         const { done, value } = await reader.read();
-        
         if (done) break;
-        
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              onComplete(fullScript);
+              return;
+            }
             try {
-              const data = JSON.parse(line.slice(6));
-              
-              switch (data.type) {
-                case 'status':
-                  onStatus(data.message);
-                  break;
-                case 'chunk':
-                  onChunk(data.content);
-                  break;
-                case 'complete':
-                  onComplete(data.script);
-                  return;
-                case 'error':
-                  onError(data.message);
-                  return;
+              const parsed = JSON.parse(data);
+              if (parsed.content) {
+                fullScript += parsed.content;
+                onChunk(parsed.content);
+              }
+              if (parsed.status) {
+                onStatus(parsed.status);
               }
             } catch {
-              // Ignore parsing errors
+              // Ignore parsing errors for incomplete JSON
             }
           }
         }
       }
-    } finally {
-      reader.releaseLock();
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Unknown error occurred');
     }
   },
 
-  // Generate script using AI (legacy non-streaming)
+  // Generate script using AI (non-streaming)
   async generateScript(topic: string, duration: number, tone: string): Promise<GenerateScriptResponse> {
-    const response = await fetch(`${API_BASE_URL}/script/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ topic, duration, tone }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to generate script: ${response.statusText}`);
-    }
-
-    return response.json();
+    const response = await apiInstance.post('/script/generate', { topic, duration, tone });
+    return response.data;
   },
 
   // Get user's videos
   async getVideos(page = 1, limit = 10): Promise<VideoListResponse> {
-    const response = await fetch(`${API_BASE_URL}/videos?page=${page}&limit=${limit}`, {
-      credentials: 'include'
+    const response = await apiInstance.get('/videos', {
+      params: { page, limit },
     });
-    if (!response.ok) {
-      throw new Error(`Failed to get videos: ${response.statusText}`);
-    }
-    return response.json();
+    return response.data;
   },
 
-  // Delete video
+  // Delete a video
   async deleteVideo(videoId: string): Promise<{ message: string }> {
-    const response = await fetch(`${API_BASE_URL}/videos/${videoId}`, {
-      method: 'DELETE',
-      credentials: 'include'
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to delete video: ${response.statusText}`);
-    }
-    return response.json();
+    const response = await apiInstance.delete(`/videos/${videoId}`);
+    return response.data;
   },
 
-  // Send video to SIEVE for eye correction
+  // Send video to Sieve for eye correction
   async sendToSieve(videoId: string): Promise<{ jobId: string; status: string }> {
-    const response = await fetch(`${API_BASE_URL}/sieve/send-to-sieve/${videoId}`, {
-      method: 'POST',
-      credentials: 'include'
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to send video to SIEVE: ${response.statusText}`);
-    }
-    return response.json();
+    const response = await apiInstance.post(`/sieve/send-to-sieve/${videoId}`);
+    return response.data;
   },
 
-  // Check SIEVE job status
+  // Check Sieve job status
   async checkSieveJob(jobId: string): Promise<{
     id: string;
     status: 'processing' | 'finished' | 'failed';
@@ -310,36 +297,23 @@ export const api = {
     };
     error?: string;
   }> {
-    const response = await fetch(`${API_BASE_URL}/sieve/check-job/${jobId}`, {
-      credentials: 'include'
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to check job status: ${response.statusText}`);
-    }
-    return response.json();
+    const response = await apiInstance.get(`/sieve/check-job/${jobId}`);
+    return response.data;
   },
 
   // Health check
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
-    const response = await fetch(`${API_BASE_URL}/debug/health`);
-    if (!response.ok) {
-      throw new Error(`Health check failed: ${response.statusText}`);
-    }
-    return response.json();
+    const response = await apiInstance.get('/debug/health');
+    return response.data;
   },
 
-  // Debug session
+  // Debug session (for troubleshooting)
   async debugSession(): Promise<{
     session: Record<string, unknown>;
     cookies: Record<string, unknown>;
     headers: Record<string, unknown>;
   }> {
-    const response = await fetch(`${API_BASE_URL}/debug/session`, {
-      credentials: 'include'
-    });
-    if (!response.ok) {
-      throw new Error(`Debug session failed: ${response.statusText}`);
-    }
-    return response.json();
+    const response = await apiInstance.get('/debug/session');
+    return response.data;
   },
 };

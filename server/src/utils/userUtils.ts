@@ -5,38 +5,19 @@ export const generateUserId = (): string => {
   return uuidv4();
 };
 
-// Get or create a user ID from session/cookie
+// Get user ID from X-User-ID header
 export const getUserId = (req: any): string => {
-  console.log('Session:', req.session);
-  console.log('Cookies:', req.cookies);
+  const userId = req.headers['x-user-id'];
   
-  // Check if user ID exists in session
-  if (req.session && req.session.userId) {
-    console.log('Found userId in session:', req.session.userId);
-    return req.session.userId;
+  if (userId) {
+    console.log('Found userId in header:', userId);
+    return userId;
   }
 
-  // Check if user ID exists in cookies
-  if (req.cookies && req.cookies.userId) {
-    console.log('Found userId in cookies:', req.cookies.userId);
-    // Also store in session for future requests
-    if (req.session) {
-      req.session.userId = req.cookies.userId;
-    }
-    return req.cookies.userId;
-  }
-
-  // Generate new user ID
-  const userId = generateUserId();
-  console.log('Generated new userId:', userId);
-  
-  // Store in session
-  if (req.session) {
-    req.session.userId = userId;
-    console.log('Stored userId in session');
-  }
-
-  return userId;
+  // Fallback: generate new user ID if header is missing
+  const newUserId = generateUserId();
+  console.log('No userId in header, generated new userId:', newUserId);
+  return newUserId;
 };
 
 // Format file size for display
