@@ -120,7 +120,7 @@ export default function CameraView({
               {cameraError && (
                 <button
                   onClick={onInitializeCamera}
-                  className="px-4 py-2 bg-pink-500 hover:bg-pink-600 rounded transition-colors text-white"
+                  className="px-4 py-2 bg-gradient-button hover:bg-gradient-button-hover rounded transition-colors text-white"
                 >
                   Retry Camera
                 </button>
