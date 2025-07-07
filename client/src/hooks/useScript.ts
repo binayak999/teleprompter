@@ -34,6 +34,8 @@ export function useScript() {
         },
         // onComplete - final script is ready with script ID
         (fullScript: string, scriptId: string, title: string) => {
+          console.log('Script generation completed - Script ID:', scriptId);
+          console.log('Script generation completed - Title:', title);
           setScript(fullScript);
           setCurrentScriptId(scriptId);
           setIsGeneratingScript(false);

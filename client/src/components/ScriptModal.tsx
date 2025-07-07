@@ -61,6 +61,7 @@ export default function ScriptModal({
 
   const handleScriptSelect = async (scriptId: string) => {
     try {
+      console.log('Selecting script from history - Script ID:', scriptId);
       const selectedScript = await api.getScriptById(scriptId);
       onScriptChange(selectedScript.content || '');
       onScriptSettingsChange({
@@ -70,6 +71,7 @@ export default function ScriptModal({
       });
       setSelectedScriptId(scriptId);
       if (onScriptIdChange) {
+        console.log('Setting current script ID to:', scriptId);
         onScriptIdChange(scriptId);
       }
       setActiveTab('editor');

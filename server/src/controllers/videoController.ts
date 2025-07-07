@@ -100,6 +100,12 @@ export class VideoController {
       const videoFile = req.files.video as any;
       const { scriptId, scriptTitle, scriptTopic } = req.body;
       
+      console.log('Video save request - User ID:', userId);
+      console.log('Video save request - Script ID:', scriptId);
+      console.log('Video save request - Script Title:', scriptTitle);
+      console.log('Video save request - Script Topic:', scriptTopic);
+      console.log('Video save request - Body:', req.body);
+      
       const timestamp = Date.now();
       const filename = `recording_${timestamp}.mp4`;
       const uploadsDir = path.join(__dirname, '../../uploads');
@@ -109,7 +115,7 @@ export class VideoController {
       await videoFile.mv(filepath);
 
       // Save video information to database
-      const video = new Video({
+      const videoData = {
         userId,
         filename,
         originalName: videoFile.name,
@@ -120,9 +126,15 @@ export class VideoController {
         scriptId: scriptId || null,
         scriptTitle: scriptTitle || null,
         scriptTopic: scriptTopic || null
-      });
-
+      };
+      
+      console.log('Saving video with data:', videoData);
+      
+      const video = new Video(videoData);
       await video.save();
+      
+      console.log('Video saved successfully with ID:', video._id);
+      console.log('Video script ID:', video.scriptId);
 
       res.json({ 
         message: 'Video saved successfully',
