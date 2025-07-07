@@ -10,6 +10,7 @@ export function useScript() {
     duration: 2,
     tone: 'professional'
   });
+  const [currentScriptId, setCurrentScriptId] = useState<string>('');
 
   const generateScript = async () => {
     if (!scriptSettings.topic) return;
@@ -18,31 +19,16 @@ export function useScript() {
     setScript(''); // Clear previous script
     
     try {
-      // Use the streaming API for better user experience
-      await api.generateScriptStream(
+      // Use the non-streaming API to get script ID
+      const response = await api.generateScript(
         scriptSettings.topic,
         scriptSettings.duration,
-        scriptSettings.tone,
-        // onChunk - append new content to script
-        (content: string) => {
-          setScript(prev => prev + content);
-        },
-        // onStatus - show status messages (optional)
-        (message: string) => {
-          console.log('Script generation status:', message);
-        },
-        // onComplete - final script is ready
-        (fullScript: string) => {
-          setScript(fullScript);
-          setIsGeneratingScript(false);
-        },
-        // onError - handle errors
-        (error: string) => {
-          console.error('Script generation failed:', error);
-          alert(`Failed to generate script: ${error}`);
-          setIsGeneratingScript(false);
-        }
+        scriptSettings.tone
       );
+      
+      setScript(response.script);
+      setCurrentScriptId(response.scriptId || '');
+      setIsGeneratingScript(false);
     } catch (error) {
       console.error('Script generation failed:', error);
       alert('Failed to generate script. Please try again.');
@@ -56,6 +42,8 @@ export function useScript() {
     isGeneratingScript,
     scriptSettings,
     setScriptSettings,
-    generateScript
+    generateScript,
+    currentScriptId,
+    setCurrentScriptId
   };
 } 

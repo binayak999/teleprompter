@@ -3,7 +3,10 @@ import { ScriptController } from '../controllers';
 
 const router = express.Router();
 
-// DeepSeek AI integration for script generation (streaming)
+// Script generation and management
 router.post('/generate', ScriptController.generateScript);
+router.get('/', ScriptController.getUserScripts);
+router.get('/:scriptId', ScriptController.getScriptById);
+router.delete('/:scriptId', ScriptController.deleteScript);
 
 export default router; 
