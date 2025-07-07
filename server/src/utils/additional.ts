@@ -1,1 +1,1 @@
-export const mediaUrl = 'https://interapi.upliftsolutions.com.np'
+export const mediaUrl = 'https://interapi.upliftsolutions.com.np/api'

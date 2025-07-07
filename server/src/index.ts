@@ -65,7 +65,7 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Serve static files from uploads directory
-app.use('/uploads', express.static(uploadsDir));
+app.use('/api/uploads', express.static(uploadsDir));
 
 // Mount routes
 app.use('/api/user', userRoutes);
