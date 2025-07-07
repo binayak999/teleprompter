@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+@theme {
+  --background-image-gradient-button: linear-gradient(
+    to right,
+    #33c9a7,
+    #3ba7f5
+  );
+  --background-image-gradient-button-hover: linear-gradient(
+    to left,
+    #33c9a7,
+    #3ba7f5
+  );
+}
+
+.custom-thumb {
+  scrollbar-color: gray; /* thumb color, track color */
+  padding: 2px;
+}
+
+.custom-thumb::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-thumb::-webkit-scrollbar-thumb {
+  background: gray;
+  border-radius: 4px;
+}
+
+.custom-thumb::-webkit-scrollbar-track {
+  background: black;
+}
