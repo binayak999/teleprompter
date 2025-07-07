@@ -90,8 +90,6 @@ export interface Video {
   durationFormatted: string;
   mimetype: string;
   scriptId?: string;
-  scriptTitle?: string;
-  scriptTopic?: string;
   sieveJobId?: string;
   correctedVideoUrl?: string;
   sieveStatus?: 'pending' | 'processing' | 'completed' | 'failed';
@@ -228,14 +226,12 @@ export const apiService = new ApiService();
 
 export const api = {
   // Save recorded video to server
-  async saveVideo(videoBlob: Blob, filename: string, scriptInfo?: { scriptId?: string; scriptTitle?: string; scriptTopic?: string }): Promise<SaveVideoResponse> {
+  async saveVideo(videoBlob: Blob, filename: string, scriptId?: string): Promise<SaveVideoResponse> {
     const formData = new FormData();
     formData.append('video', videoBlob, filename);
     
-    if (scriptInfo) {
-      if (scriptInfo.scriptId) formData.append('scriptId', scriptInfo.scriptId);
-      if (scriptInfo.scriptTitle) formData.append('scriptTitle', scriptInfo.scriptTitle);
-      if (scriptInfo.scriptTopic) formData.append('scriptTopic', scriptInfo.scriptTopic);
+    if (scriptId) {
+      formData.append('scriptId', scriptId);
     }
 
     const response = await apiInstance.post('/videos/save', formData, {

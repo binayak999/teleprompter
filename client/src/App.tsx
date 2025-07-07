@@ -237,13 +237,8 @@ export default function TeleprompterApp() {
           console.log("Uploading video to server...");
           console.log("Current script ID:", currentScriptId);
           console.log("Script settings:", scriptSettings);
-          const scriptInfo = currentScriptId ? {
-            scriptId: currentScriptId,
-            scriptTitle: scriptSettings.topic,
-            scriptTopic: scriptSettings.topic
-          } : undefined;
-          console.log("Script info being sent:", scriptInfo);
-          const result = await api.saveVideo(blob, filename, scriptInfo);
+          console.log("Script ID being sent:", currentScriptId);
+          const result = await api.saveVideo(blob, filename, currentScriptId);
 
           console.log("Video uploaded successfully:", result);
 
