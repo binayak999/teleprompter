@@ -32,6 +32,9 @@ export class VideoController {
         duration: video.duration,
         durationFormatted: formatDuration(video.duration || 0),
         mimetype: video.mimetype,
+        scriptId: video.scriptId,
+        scriptTitle: video.scriptTitle,
+        scriptTopic: video.scriptTopic,
         sieveJobId: video.sieveJobId,
         correctedVideoUrl: video.correctedVideoUrl,
         sieveStatus: video.sieveStatus,
@@ -95,6 +98,8 @@ export class VideoController {
 
       const userId = getUserId(req);
       const videoFile = req.files.video as any;
+      const { scriptId, scriptTitle, scriptTopic } = req.body;
+      
       const timestamp = Date.now();
       const filename = `recording_${timestamp}.mp4`;
       const uploadsDir = path.join(__dirname, '../../uploads');
@@ -111,7 +116,10 @@ export class VideoController {
         filepath,
         url: `/uploads/${filename}`,
         size: videoFile.size,
-        mimetype: videoFile.mimetype
+        mimetype: videoFile.mimetype,
+        scriptId: scriptId || null,
+        scriptTitle: scriptTitle || null,
+        scriptTopic: scriptTopic || null
       });
 
       await video.save();
@@ -120,7 +128,8 @@ export class VideoController {
         message: 'Video saved successfully',
         filename,
         url: `/uploads/${filename}`,
-        videoId: video._id
+        videoId: video._id,
+        scriptId: video.scriptId
       });
     } catch (error) {
       console.error('Video save error:', error);

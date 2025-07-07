@@ -9,6 +9,9 @@ export interface IVideo extends Document {
   size: number;
   mimetype: string;
   duration?: number;
+  scriptId?: string;
+  scriptTitle?: string;
+  scriptTopic?: string;
   sieveJobId?: string;
   correctedVideoUrl?: string;
   sieveStatus?: 'pending' | 'processing' | 'completed' | 'failed';
@@ -49,6 +52,18 @@ const VideoSchema = new Schema<IVideo>({
   duration: {
     type: Number,
     default: 0
+  },
+  scriptId: {
+    type: String,
+    default: null
+  },
+  scriptTitle: {
+    type: String,
+    default: null
+  },
+  scriptTopic: {
+    type: String,
+    default: null
   },
   sieveJobId: {
     type: String,

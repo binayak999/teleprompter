@@ -52,6 +52,31 @@ export interface SaveVideoResponse {
 
 export interface GenerateScriptResponse {
   script: string;
+  scriptId: string;
+  title: string;
+  message: string;
+}
+
+export interface Script {
+  id: string;
+  scriptId: string;
+  title: string;
+  content?: string;
+  topic: string;
+  duration: number;
+  tone: 'professional' | 'casual' | 'enthusiastic' | 'informative';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScriptListResponse {
+  scripts: Script[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 export interface Video {
@@ -64,6 +89,9 @@ export interface Video {
   duration: number;
   durationFormatted: string;
   mimetype: string;
+  scriptId?: string;
+  scriptTitle?: string;
+  scriptTopic?: string;
   sieveJobId?: string;
   correctedVideoUrl?: string;
   sieveStatus?: 'pending' | 'processing' | 'completed' | 'failed';
@@ -176,15 +204,39 @@ class ApiService {
     const response = await this.api.delete(`/videos/${videoId}`);
     return response.data;
   }
+
+  // Script management methods
+  async getUserScripts(page = 1, limit = 10): Promise<ScriptListResponse> {
+    const response = await this.api.get('/script', {
+      params: { page, limit },
+    });
+    return response.data;
+  }
+
+  async getScriptById(scriptId: string): Promise<Script> {
+    const response = await this.api.get(`/script/${scriptId}`);
+    return response.data;
+  }
+
+  async deleteScript(scriptId: string): Promise<{ message: string }> {
+    const response = await this.api.delete(`/script/${scriptId}`);
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();
 
 export const api = {
   // Save recorded video to server
-  async saveVideo(videoBlob: Blob, filename: string): Promise<SaveVideoResponse> {
+  async saveVideo(videoBlob: Blob, filename: string, scriptInfo?: { scriptId?: string; scriptTitle?: string; scriptTopic?: string }): Promise<SaveVideoResponse> {
     const formData = new FormData();
     formData.append('video', videoBlob, filename);
+    
+    if (scriptInfo) {
+      if (scriptInfo.scriptId) formData.append('scriptId', scriptInfo.scriptId);
+      if (scriptInfo.scriptTitle) formData.append('scriptTitle', scriptInfo.scriptTitle);
+      if (scriptInfo.scriptTopic) formData.append('scriptTopic', scriptInfo.scriptTopic);
+    }
 
     const response = await apiInstance.post('/videos/save', formData, {
       headers: {
@@ -314,6 +366,24 @@ export const api = {
     headers: Record<string, unknown>;
   }> {
     const response = await apiInstance.get('/debug/session');
+    return response.data;
+  },
+
+  // Script management methods
+  async getUserScripts(page = 1, limit = 10): Promise<ScriptListResponse> {
+    const response = await apiInstance.get('/script', {
+      params: { page, limit },
+    });
+    return response.data;
+  },
+
+  async getScriptById(scriptId: string): Promise<Script> {
+    const response = await apiInstance.get(`/script/${scriptId}`);
+    return response.data;
+  },
+
+  async deleteScript(scriptId: string): Promise<{ message: string }> {
+    const response = await apiInstance.delete(`/script/${scriptId}`);
     return response.data;
   },
 };
