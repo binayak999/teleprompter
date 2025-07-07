@@ -378,7 +378,7 @@ export default function TeleprompterApp() {
   }, [isRecording, pauseRecording, toggleScrolling]);
 
   return (
-    <div className="min-h-screen relative p-6">
+    <div className="min-h-screen relative pb-0 p-6">
       {/* <div className="h-screen w-screen absolute inset-0  -z-10"/> */}
       <div className=" absolute top-0 left-0 right-0 bottom-0 bg-[url('/future.jpg')] bg-center bg-cover bg-no-repeat blur-xs -z-30 brightness-[0.85]" />
       {/* Success Message */}
@@ -416,7 +416,7 @@ export default function TeleprompterApp() {
       />
 
       {/* Camera View */}
-      <div className="relative max-w-7xl mx-auto">
+      <div className="relative max-w-7xl  mx-auto">
         <CameraView
           stream={stream}
           isInitializing={isInitializing}
