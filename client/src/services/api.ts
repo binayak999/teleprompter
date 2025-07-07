@@ -83,7 +83,7 @@ class ApiService {
   }
 
   async generateScript(request: ScriptGenerationRequest): Promise<ScriptGenerationResponse> {
-    return this.fetchWithErrorHandling('/generate-script', {
+    return this.fetchWithErrorHandling('/script/generate', {
       method: 'POST',
       body: JSON.stringify(request),
     });
@@ -93,7 +93,7 @@ class ApiService {
     const formData = new FormData();
     formData.append('video', videoFile);
 
-    const response = await fetch(`${API_BASE_URL}/correct-eyes`, {
+    const response = await fetch(`${API_BASE_URL}/sieve/correct-eyes`, {
       method: 'POST',
       body: formData,
     });
@@ -107,14 +107,14 @@ class ApiService {
   }
 
   async checkJobStatus(jobId: string): Promise<JobStatusResponse> {
-    return this.fetchWithErrorHandling(`/check-job/${jobId}`);
+    return this.fetchWithErrorHandling(`/sieve/check-job/${jobId}`);
   }
 
   async saveVideo(videoBlob: Blob, filename: string): Promise<SaveVideoResponse> {
     const formData = new FormData();
     formData.append('video', videoBlob, filename);
 
-    const response = await fetch(`${API_BASE_URL}/save-video`, {
+    const response = await fetch(`${API_BASE_URL}/videos/save`, {
       method: 'POST',
       body: formData,
     });
@@ -127,7 +127,7 @@ class ApiService {
   }
 
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
-    const response = await fetch(`${API_BASE_URL}/health`);
+    const response = await fetch(`${API_BASE_URL}/debug/health`);
     if (!response.ok) {
       throw new Error(`Health check failed: ${response.statusText}`);
     }
@@ -164,7 +164,7 @@ export const api = {
     const formData = new FormData();
     formData.append('video', videoBlob, filename);
 
-    const response = await fetch(`${API_BASE_URL}/save-video`, {
+    const response = await fetch(`${API_BASE_URL}/videos/save`, {
       method: 'POST',
       body: formData,
       credentials: 'include'
@@ -187,7 +187,7 @@ export const api = {
     onComplete: (fullScript: string) => void,
     onError: (error: string) => void
   ): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/generate-script`, {
+    const response = await fetch(`${API_BASE_URL}/script/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -249,7 +249,7 @@ export const api = {
 
   // Generate script using AI (legacy non-streaming)
   async generateScript(topic: string, duration: number, tone: string): Promise<GenerateScriptResponse> {
-    const response = await fetch(`${API_BASE_URL}/generate-script`, {
+    const response = await fetch(`${API_BASE_URL}/script/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -289,7 +289,7 @@ export const api = {
 
   // Send video to SIEVE for eye correction
   async sendToSieve(videoId: string): Promise<{ jobId: string; status: string }> {
-    const response = await fetch(`${API_BASE_URL}/send-to-sieve/${videoId}`, {
+    const response = await fetch(`${API_BASE_URL}/sieve/send-to-sieve/${videoId}`, {
       method: 'POST',
       credentials: 'include'
     });
@@ -310,7 +310,7 @@ export const api = {
     };
     error?: string;
   }> {
-    const response = await fetch(`${API_BASE_URL}/check-job/${jobId}`, {
+    const response = await fetch(`${API_BASE_URL}/sieve/check-job/${jobId}`, {
       credentials: 'include'
     });
     if (!response.ok) {
@@ -321,7 +321,7 @@ export const api = {
 
   // Health check
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
-    const response = await fetch(`${API_BASE_URL}/health`);
+    const response = await fetch(`${API_BASE_URL}/debug/health`);
     if (!response.ok) {
       throw new Error(`Health check failed: ${response.statusText}`);
     }
@@ -334,7 +334,7 @@ export const api = {
     cookies: Record<string, unknown>;
     headers: Record<string, unknown>;
   }> {
-    const response = await fetch(`${API_BASE_URL}/debug-session`, {
+    const response = await fetch(`${API_BASE_URL}/debug/session`, {
       credentials: 'include'
     });
     if (!response.ok) {
