@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://root:Ra1A3y3oiVxk@47.128.214.153:27017/teleprompter?authSource=admin&readPreference=primary&appname=MongoDB%20Compass&directConnection=true&ssl=false';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/teleprompter';
 
 export const connectDB = async (): Promise<void> => {
   try {

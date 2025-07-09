@@ -122,7 +122,6 @@ export class VideoController {
         scriptId: scriptId || null
       };
       
-      console.log('Saving video with data:', videoData);
       
       const video = new Video(videoData);
       await video.save();
