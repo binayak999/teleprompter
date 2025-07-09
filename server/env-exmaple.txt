@@ -1,0 +1,6 @@
+PORT=3001
+DEEPSEEK_API_KEY=*******
+SIEVE_API_KEY=*******
+NODE_ENV=development
+MONGODB_URI=mongodb://localhost:27017/teleprompter?authSource=admin&readPreference=primary&appname=MongoDB%20Compass&directConnection=true&ssl=false
+CLIENT_URL=http://localhost:5173
