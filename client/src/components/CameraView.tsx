@@ -83,7 +83,7 @@ export default function CameraView({
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="bg-black rounded-2xl overflow-hidden shadow-2xl relative" style={{ height: 'calc(100vh - 300px)', minHeight: '500px' }}>
+      <div className="bg-black rounded-2xl overflow-hidden shadow-2xl relative" style={{ height: 'calc(100vh - 350px)', minHeight: '500px' }}>
         {/* Camera Video */}
         {stream && !cameraError ? (
           <>

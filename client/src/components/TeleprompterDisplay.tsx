@@ -43,10 +43,18 @@ export default function TeleprompterDisplay({ script, isScrolling, scrollSpeed }
       <div
         ref={containerRef}
         className="bg-white rounded-md p-6 px-7 shadow-xl max-w-7xl mx-auto overflow-hidden relative"
-        style={{ height: '150px', overflowY: 'auto' }}
+        style={{ height: '200px', overflowY: 'auto' }}
       >
         <div className="text-gray-900 text-4xl leading-relaxed font-semibold select-none text-center">
-          {script}
+          {script.trim() ? (
+            script
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[150px] text-gray-500">
+              <div className="text-2xl mb-2">📝</div>
+              <div className="text-lg">No script available</div>
+              <div className="text-sm mt-1">Click "Script" in the header to add or generate a script</div>
+            </div>
+          )}
         </div>
       </div>
     </div>

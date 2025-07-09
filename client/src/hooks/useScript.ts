@@ -3,7 +3,7 @@ import type { ScriptSettings } from '../types';
 import { api } from '../services/api';
 
 export function useScript() {
-  const [script, setScript] = useState<string>('Our source, who prefers to remain anonymous, stated that the mines had some sort of on-going operational challenges that needed immediate attention from the management team. The situation required careful coordination between multiple departments to ensure safety protocols were maintained while addressing the technical issues that had emerged during the routine inspection process.');
+  const [script, setScript] = useState<string>('');
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [scriptSettings, setScriptSettings] = useState<ScriptSettings>({
     topic: '',

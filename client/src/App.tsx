@@ -12,10 +12,11 @@ import { api } from "./services/api";
 
 export default function TeleprompterApp() {
   // State management
-  const [scrollSpeed, setScrollSpeed] = useState(50);
+  const [scrollSpeed, setScrollSpeed] = useState(25); // More natural reading speed
   const [eyeCorrectionEnabled, setEyeCorrectionEnabled] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
+  const [eyeCorrectionTriggered, setEyeCorrectionTriggered] = useState(false);
 
   // Custom hooks
   const {
@@ -153,10 +154,17 @@ export default function TeleprompterApp() {
 
   // Recording functions
   const startRecording = useCallback(async () => {
-    console.log("startRecording called, stream:", !!stream);
+    console.log("startRecording called, stream:", !!stream, "script:", !!script.trim());
     if (!stream) {
       alert(
         "Camera not available. Please ensure camera permissions are granted."
+      );
+      return;
+    }
+
+    if (!script.trim()) {
+      alert(
+        "Please add a script first before recording. Click 'Script' in the header to add or generate a script."
       );
       return;
     }
@@ -251,14 +259,48 @@ export default function TeleprompterApp() {
           a.click();
           document.body.removeChild(a);
 
-          // Show success message
-          setShowSuccessMessage(true);
-          setTimeout(() => setShowSuccessMessage(false), 5000);
+          // Automatically trigger eye correction if enabled
+          if (eyeCorrectionEnabled && result.videoId) {
+            try {
+              console.log("Eye correction enabled, sending video to Sieve...");
+              const sieveResult = await api.sendToSieve(result.videoId);
+              console.log("Video sent to Sieve for eye correction:", sieveResult);
+              
+              // Show success message with eye correction info
+              setEyeCorrectionTriggered(true);
+              setShowSuccessMessage(true);
+              setTimeout(() => {
+                setShowSuccessMessage(false);
+                setEyeCorrectionTriggered(false);
+              }, 5000);
+              
+              console.log(
+                "Recording saved locally, uploaded to server, and sent for eye correction:",
+                filename
+              );
+            } catch (sieveError) {
+              console.error("Failed to send video to Sieve:", sieveError);
+              // Still show success message for video upload, but log the Sieve error
+              setEyeCorrectionTriggered(false);
+              setShowSuccessMessage(true);
+              setTimeout(() => setShowSuccessMessage(false), 5000);
+              
+              console.log(
+                "Recording saved locally and uploaded to server (eye correction failed):",
+                filename
+              );
+            }
+          } else {
+            // Show success message
+            setEyeCorrectionTriggered(false);
+            setShowSuccessMessage(true);
+            setTimeout(() => setShowSuccessMessage(false), 5000);
 
-          console.log(
-            "Recording saved locally and uploaded to server:",
-            filename
-          );
+            console.log(
+              "Recording saved locally and uploaded to server:",
+              filename
+            );
+          }
         } catch (error) {
           console.error("Error processing recording:", error);
           const errorMessage =
@@ -286,6 +328,7 @@ export default function TeleprompterApp() {
     }
   }, [
     stream,
+    script,
     startCanvasRecording,
     recordedChunksRef,
     mediaRecorderRef,
@@ -297,6 +340,7 @@ export default function TeleprompterApp() {
     setShowSuccessMessage,
     currentScriptId,
     scriptSettings,
+    eyeCorrectionEnabled, // Add eye correction setting to dependencies
   ]);
 
   const pauseRecording = useCallback(() => {
@@ -359,10 +403,10 @@ export default function TeleprompterApp() {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === "ArrowUp" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        setScrollSpeed((prev) => Math.min(200, prev + 5));
+        setScrollSpeed((prev) => Math.min(100, prev + 2)); // Updated for new speed range
       } else if (e.key === "ArrowDown" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        setScrollSpeed((prev) => Math.max(10, prev - 5));
+        setScrollSpeed((prev) => Math.max(5, prev - 2)); // Updated for new speed range
       } else if (e.key === "") {
         e.preventDefault();
         if (isRecording) {
@@ -385,6 +429,7 @@ export default function TeleprompterApp() {
       <SuccessMessage
         isVisible={showSuccessMessage}
         onClose={() => setShowSuccessMessage(false)}
+        eyeCorrectionTriggered={eyeCorrectionTriggered}
       />
 
       {/* Header */}
@@ -439,6 +484,7 @@ export default function TeleprompterApp() {
           isCameraHidden={isCameraHidden}
           isMuted={isMuted}
           eyeCorrectionEnabled={eyeCorrectionEnabled}
+          script={script}
           onStartRecording={() => {
             console.log("RecordingControls: startRecording button clicked");
             startRecording();
@@ -456,6 +502,7 @@ export default function TeleprompterApp() {
           onToggleEyeCorrection={() =>
             setEyeCorrectionEnabled(!eyeCorrectionEnabled)
           }
+          onOpenScriptModal={() => setShowDropdown(true)}
         />
       </div>
     </div>

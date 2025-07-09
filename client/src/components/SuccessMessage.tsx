@@ -3,9 +3,10 @@ import React from 'react';
 interface SuccessMessageProps {
   isVisible: boolean;
   onClose: () => void;
+  eyeCorrectionTriggered?: boolean;
 }
 
-export default function SuccessMessage({ isVisible, onClose }: SuccessMessageProps) {
+export default function SuccessMessage({ isVisible, onClose, eyeCorrectionTriggered = false }: SuccessMessageProps) {
   if (!isVisible) return null;
 
   return (
@@ -13,7 +14,12 @@ export default function SuccessMessage({ isVisible, onClose }: SuccessMessagePro
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
       </svg>
-      <span className="font-medium">Video uploaded to server and downloaded locally!</span>
+      <span className="font-medium">
+        {eyeCorrectionTriggered 
+          ? "Video uploaded and eye correction started!" 
+          : "Video uploaded to server and downloaded locally!"
+        }
+      </span>
       <button
         onClick={onClose}
         className="ml-2 hover:bg-green-600 rounded-full p-1 transition-colors"

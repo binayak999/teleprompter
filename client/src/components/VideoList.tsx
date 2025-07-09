@@ -11,7 +11,7 @@ interface VideoListProps {
 export default function VideoList({ isOpen, onClose }: VideoListProps) {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
   const [processingVideos, setProcessingVideos] = useState<Set<string>>(new Set());
   const [pagination, setPagination] = useState({
     page: 1,
@@ -19,10 +19,14 @@ export default function VideoList({ isOpen, onClose }: VideoListProps) {
     total: 0,
     pages: 0
   });
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Polling interval for job status
+  const [pollingInterval, setPollingInterval] = useState<number | null>(null);
 
   const fetchVideos = async (page = 1) => {
     setLoading(true);
-    setError('');
+    setError(null);
     
     try {
       const response = await api.getVideos(page, 10);
@@ -36,11 +40,82 @@ export default function VideoList({ isOpen, onClose }: VideoListProps) {
     }
   };
 
+  // Start polling for videos in processing state
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const processingVideoIds = videos
+      .filter(video => video.sieveStatus === 'processing' && video.sieveJobId)
+      .map(video => video.sieveJobId!);
+
+    if (processingVideoIds.length === 0) {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        setPollingInterval(null);
+      }
+      return;
+    }
+
+    // Clear existing interval
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+    }
+
+    // Start new polling interval
+    const interval = setInterval(async () => {
+      try {
+        for (const jobId of processingVideoIds) {
+          console.log('Polling job status for:', jobId);
+          const jobStatus = await api.checkSieveJob(jobId);
+          console.log('Job status response:', jobStatus);
+          
+          if (jobStatus.status === 'finished') {
+            console.log('Job finished successfully');
+            setNotification({ type: 'success', message: 'Eye correction completed! The corrected video is ready for download.' });
+            // Refresh the video list to get updated status
+            await fetchVideos(pagination.page);
+            break; // Exit loop since we're refreshing the list
+          } else if (jobStatus.status === 'failed') {
+            console.log('Job failed');
+            setNotification({ type: 'error', message: 'Eye correction failed. Please try again.' });
+            // Refresh the video list to get updated status
+            await fetchVideos(pagination.page);
+            break; // Exit loop since we're refreshing the list
+          } else {
+            console.log('Job still processing, status:', jobStatus.status);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling job status:', error);
+      }
+    }, 10000); // Check every 10 seconds
+
+    setPollingInterval(interval);
+
+    // Cleanup on unmount or when modal closes
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isOpen, videos, pagination.page]);
+
+  // Initial fetch when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchVideos();
     }
   }, [isOpen]);
+
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const handleDelete = async (videoId: string) => {
     if (!confirm('Are you sure you want to delete this video?')) {
@@ -69,45 +144,15 @@ export default function VideoList({ isOpen, onClose }: VideoListProps) {
       const result = await api.sendToSieve(videoId);
       console.log('Video sent to SIEVE:', result);
 
-      // Poll for job completion
-      const pollJobStatus = async () => {
-        try {
-          const jobStatus = await api.checkSieveJob(result.jobId);
-          
-          if (jobStatus.status === 'finished') {
-            alert('Eye correction completed! The corrected video is ready for download.');
-            setProcessingVideos(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(videoId);
-              return newSet;
-            });
-            // Refresh the video list to show updated status
-            fetchVideos(pagination.page);
-          } else if (jobStatus.status === 'failed') {
-            alert('Eye correction failed. Please try again.');
-            setProcessingVideos(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(videoId);
-              return newSet;
-            });
-            // Refresh the video list to show updated status
-            fetchVideos(pagination.page);
-          } else {
-            // Still processing, check again in 10 seconds
-            setTimeout(pollJobStatus, 10000);
-          }
-        } catch (error) {
-          console.error('Error checking job status:', error);
-          alert('Error checking processing status. Please try again.');
-          setProcessingVideos(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(videoId);
-            return newSet;
-          });
-        }
-      };
-
-      pollJobStatus();
+      // Refresh the video list to show updated status
+      await fetchVideos(pagination.page);
+      
+      // Remove from processing set
+      setProcessingVideos(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(videoId);
+        return newSet;
+      });
     } catch (err) {
       setError('Failed to send video to SIEVE');
       console.error('Error sending to SIEVE:', err);
@@ -121,7 +166,7 @@ export default function VideoList({ isOpen, onClose }: VideoListProps) {
 
   const handleDownload = (video: Video) => {
     const link = document.createElement('a');
-    link.href = `http://localhost:3001${video.url}`;
+    link.href = `https://interapi.upliftsolutions.com.np/api${video.url}`;
     link.download = video.originalName;
     document.body.appendChild(link);
     link.click();
@@ -135,6 +180,10 @@ export default function VideoList({ isOpen, onClose }: VideoListProps) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleRefreshStatus = async () => {
+    await fetchVideos(pagination.page);
   };
 
   const formatDate = (dateString: string) => {
@@ -155,16 +204,44 @@ export default function VideoList({ isOpen, onClose }: VideoListProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-2xl font-semibold text-gray-900">My Recordings</h2>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-all"
-          >
-            <span className="text-gray-600 text-lg">×</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefreshStatus}
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              title="Refresh status"
+            >
+              Refresh
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-all"
+            >
+              <span className="text-gray-600 text-lg">×</span>
+            </button>
+          </div>
         </div>
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[60vh]">
+          {/* Notification */}
+          {notification && (
+            <div className={`mb-4 p-3 rounded-lg ${
+              notification.type === 'success' 
+                ? 'bg-green-100 text-green-800 border border-green-200' 
+                : 'bg-red-100 text-red-800 border border-red-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span>{notification.message}</span>
+                <button
+                  onClick={() => setNotification(null)}
+                  className="text-sm hover:opacity-70"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+          
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>

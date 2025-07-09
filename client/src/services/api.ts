@@ -15,7 +15,7 @@ const generateUserId = (): string => {
   return userId;
 };
 
-const API_BASE_URL = 'http://192.168.1.67:3001/api'; // Updated to use server IP
+const API_BASE_URL = 'http://localhost:3001/api'; // Updated to use server IP
 
 export interface ScriptGenerationRequest {
   topic: string;

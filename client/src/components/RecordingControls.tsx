@@ -20,12 +20,14 @@ interface RecordingControlsProps {
   isCameraHidden: boolean;
   isMuted: boolean;
   eyeCorrectionEnabled: boolean;
+  script: string;
   onStartRecording: () => void;
   onPauseRecording: () => void;
   onStopRecording: () => void;
   onToggleCamera: () => void;
   onToggleMute: () => void;
   onToggleEyeCorrection: () => void;
+  onOpenScriptModal: () => void;
 }
 
 export default function RecordingControls({
@@ -37,12 +39,14 @@ export default function RecordingControls({
   isCameraHidden,
   isMuted,
   eyeCorrectionEnabled,
+  script,
   onStartRecording,
   onPauseRecording,
   onStopRecording,
   onToggleCamera,
   onToggleMute,
   onToggleEyeCorrection,
+  onOpenScriptModal,
 }: RecordingControlsProps) {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -102,7 +106,7 @@ export default function RecordingControls({
                 )}
               </button>
               <span className="text-xs text-gray-700 mt-2 font-medium">
-                Eye Correction On
+                {eyeCorrectionEnabled ? "Eye Correction On" : "Eye Correction Off"}
               </span>
             </div>
           </div>
@@ -136,19 +140,21 @@ export default function RecordingControls({
             <div className="flex items-center gap-4">
               {!isRecording ? (
                 <button
-                  onClick={onStartRecording}
+                  onClick={!script.trim() ? onOpenScriptModal : onStartRecording}
                   disabled={!stream}
-                  className="bg-red-500 hover:bg-red-600  disabled:bg-gray-400 disabled:cursor-not-allowed max-w-max px-6 py-3 rounded-md flex items-center justify-center transition-all  shadow-lg gap-2"
-                  title="Start Recording"
+                  className="bg-red-500 rounded-full hover:bg-red-600  disabled:bg-gray-400 disabled:cursor-not-allowed max-w-max px-6 py-3 flex items-center justify-center transition-all  shadow-lg gap-2"
+                  title={!script.trim() ? "Click to add a script" : "Start Recording"}
                 >
                   <span className="size-5 bg-white rounded-full" />
-                  <span className="font-semibold text-white">Record</span>
+                  <span className="font-semibold text-white">
+                    {!script.trim() ? "Add Script First" : "Record"}
+                  </span>
                 </button>
               ) : (
                 <>
                   <button
                     onClick={onPauseRecording}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-8 h-12 rounded-md flex items-center justify-center transition-all font-medium text-sm border border-gray-300 shadow-lg"
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-8 h-12 flex items-center justify-center transition-all font-medium text-sm border border-gray-300 shadow-lg rounded-full"
                     title={isPaused ? "Resume Recording" : "Pause Recording"}
                   >
                     {isPaused ? (
@@ -166,7 +172,7 @@ export default function RecordingControls({
 
                   <button
                     onClick={onStopRecording}
-                    className="bg-red-500 hover:bg-red-600 text-white px-8 h-12 rounded-md flex items-center justify-center transition-all font-medium text-sm shadow-lg"
+                    className="bg-red-500 hover:bg-red-600 text-white px-8 h-12  flex items-center justify-center transition-all font-medium text-sm shadow-lg rounded-full"
                     title="Stop Recording"
                   >
                     <Square className="w-4 h-4 mr-2 fill-current" />
